@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ko"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>스텔라 비트: 밤의 사냥꾼들</title>
+<style>
+:root{--bg:#120a24;--ink:#f4eeff;--pink:#ff4fa3;--cyan:#4de2ff;--box:rgba(10,5,25,.88);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
+html{height:100%}
+body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:"Apple SD Gothic Neo","Noto Sans KR",sans-serif;overflow:hidden}
+#g{position:relative;height:100%;max-width:560px;margin:0 auto;display:flex;flex-direction:column;transition:background 1s;background:linear-gradient(180deg,#2a1150,#120a24)}
+#stage{flex:1;display:flex;align-items:flex-end;justify-content:center;font-size:96px;padding-bottom:8px;position:relative}
+#stage .sp{filter:drop-shadow(0 0 18px var(--pink));transition:opacity .3s}
+#hud{position:absolute;top:8px;left:10px;right:10px;display:flex;justify-content:space-between;font-size:12px;opacity:.85}
+#box{background:var(--box);border-top:2px solid var(--pink);padding:14px 16px 20px;min-height:210px;cursor:pointer}
+#name{display:inline-block;background:var(--pink);color:#fff;font-weight:700;font-size:13px;padding:2px 10px;border-radius:10px;margin-bottom:8px}
+#txt{font-size:16px;line-height:1.65;min-height:76px;white-space:pre-wrap}
+#ch{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+#ch button{font:inherit;font-size:15px;color:var(--ink);background:#2b1a52;border:1px solid var(--cyan);border-radius:10px;padding:11px;text-align:left}
+#ch button:active{background:var(--cyan);color:#111}
+#hint{text-align:right;font-size:11px;opacity:.5}
+#title{position:absolute;inset:0;background:rgba(18,10,36,.96);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;text-align:center;z-index:5}
+#title h1{margin:0;font-size:30px;color:var(--pink);text-shadow:0 0 16px var(--pink)}
+#title button{font:inherit;font-size:18px;padding:12px 34px;border-radius:30px;border:0;background:var(--pink);color:#fff;font-weight:700}
+</style></head><body>
+<div id="g">
+<div id="stage"><div id="hud"><span id="s1"></span><span id="s2"></span></div><div class="sp" id="sp"></div></div>
+<div id="box"><div id="name"></div><div id="txt"></div><div id="ch"></div><div id="hint">탭해서 계속 ▶</div></div>
+<div id="title"><div style="font-size:54px">🌙🎤👹</div><h1>스텔라 비트</h1><div style="opacity:.8">낮에는 아이돌, 밤에는 악마 사냥꾼<br>당신의 선택이 그룹의 운명을 바꿉니다</div><button id="start">시작하기</button></div>
+</div>
+<script>
+var st={trust:0,courage:0},cur=null,idx=0,busy=false;
+var BG={stage:"linear-gradient(180deg,#5b1b8f,#120a24)",night:"linear-gradient(180deg,#071433,#1b0a33)",hall:"linear-gradient(180deg,#3a2a6b,#120a24)",demon:"linear-gradient(180deg,#5a0a2a,#14040f)",dawn:"linear-gradient(180deg,#ff8fb5,#4a2a7a)"};
+var C={나:["나","🧑‍🎤"],리아:["리아","👩‍🎤"],주하:["주하","🕶️"],세이:["세이","🐰"],악마:["???","👹"],해설:["","🌙"]};
+var S={
+a1:{bg:"stage",l:[["해설","데뷔 일주일 전. 연습실의 거울에는 오늘도 지친 내 얼굴이 비친다."],["리아","신입 연습생 치고는 안무를 빨리 외우네. 이름이…"],["나","저는 하나예요. 열심히 하겠습니다!"],["리아","좋아. 그런데 하나야, 우리에겐 비밀이 하나 있어. 들을 준비 됐니?"]],c:[["궁금해요, 알려주세요!","a2",{courage:1}],["…혹시 무서운 이야기인가요?","a2",{trust:1}]]},
+a2:{bg:"hall",l:[["주하","쉿. 목소리 낮춰. 우리 노래는 그냥 노래가 아니야."],["세이","무대의 팬 함성이 결계를 만들어요. 악마들은 그 빛을 싫어하거든요!"],["리아","우린 밤마다 ‘허밍 게이트’를 지켜. 네 목소리가 그 열쇠일지도 몰라."]],c:[["믿기 어렵지만… 도울게요.","a3",{trust:1}],["증명해 주세요. 직접 보고 싶어요.","a3",{courage:1}]]},
+a3:{bg:"night",l:[["해설","그날 밤, 옥상. 서울의 불빛 아래에서 바람이 이상하게 차가웠다."],["악마","크크… 신입의 목소리다. 달콤한 냄새가 나는군."],["주하","왔다. 하나, 내 뒤로!"]],c:[["도망치지 않고 노래를 부른다","a4",{courage:2}],["주하 뒤에 숨는다","a4",{trust:1}],["세이에게 같이 부르자고 손을 잡는다","a4",{trust:2}]]},
+a4:{bg:"demon",l:[["해설","내 목소리가 울려 퍼지자 허공에 푸른 빛의 음표가 번졌다."],["세이","와… 하나 언니, 공명이에요! 전설의 ‘하모니’예요!"],["악마","그 목소리… 치워라! 치워!"],["리아","지금이야. 다 같이!"]],c:[["리아의 파트에 화음을 쌓는다","a5",{trust:1}],["내 멋대로 애드리브를 던진다","a5",{courage:1}]]},
+a5:{bg:"dawn",l:[["해설","악마는 재가 되어 사라졌다. 동이 틀 무렵 우리는 옥상에 주저앉았다."],["주하","…나쁘지 않았어, 신입."],["리아","데뷔 무대가 일주일 뒤야. 그리고 거기엔 더 큰 놈이 올 거야."],["세이","언니, 우리 정말 같이 해요?"]],c:[["물론이죠. 우린 한 팀이에요.","a6",{trust:1}],["제가 앞장설게요.","a6",{courage:1}]]},
+a6:{bg:"stage",l:[["해설","데뷔 무대 당일. 수천 개의 응원봉이 바다처럼 일렁인다."],["악마","크하하! 이 무대 전체가 내 사냥터다!"],["리아","하나야, 마지막 후렴을 네가 이끌어야 해."]],c:[["팀원들의 이름을 부르며 함께 노래한다","end",{trust:2}],["혼자 힘으로 모든 걸 끝낸다","end",{courage:2}],["팬들에게 마이크를 넘긴다","end",{trust:1,courage:1}]]}
+};
+function ending(){
+ var t=st.trust,c=st.courage,id,h,l;
+ if(t>=6){id="hr";h="🌈 하모니 엔딩";l="모두의 목소리가 하나로 합쳐져 악마는 완전히 정화됐다. 스텔라 비트는 전설의 첫 무대를 남겼고, 우리는 영원한 팀이 되었다."}
+ else if(c>=6){id="br";h="⚡ 솔로 에이스 엔딩";l="나의 목소리가 하늘을 가르며 악마를 베었다. 하지만 멤버들은 조용히 말했다. ‘다음엔 같이 하자.’"}
+ else{id="bl";h="🌙 밸런스 엔딩";l="믿음과 용기, 둘 다 적당히. 악마는 물러났지만 허밍 게이트는 아직 열려 있다. 우리의 밤은 계속된다."}
+ return {bg:"dawn",l:[["해설",l],["해설","— "+h+" —\n신뢰 "+t+" · 용기 "+c]],c:[["다시 하기","a1",{reset:1}]]};
+}
+function show(id){cur=id==="end"?ending():S[id];idx=0;document.getElementById("g").style.background=BG[cur.bg];line();}
+function hud(){document.getElementById("s1").textContent="💖 신뢰 "+st.trust;document.getElementById("s2").textContent="⚡ 용기 "+st.courage}
+function line(){
+ var ln=cur.l[idx],p=C[ln[0]];
+ document.getElementById("name").style.display=ln[0]==="해설"?"none":"inline-block";
+ document.getElementById("name").textContent=p[0];
+ document.getElementById("sp").textContent=p[1];
+ document.getElementById("txt").textContent=ln[1];
+ document.getElementById("ch").innerHTML="";
+ document.getElementById("hint").style.visibility="visible";
+ hud();
+ if(idx===cur.l.length-1)choices();
+}
+function choices(){
+ document.getElementById("hint").style.visibility="hidden";
+ var box=document.getElementById("ch");
+ cur.c.forEach(function(o){
+  var b=document.createElement("button");b.textContent=o[0];
+  b.onclick=function(e){e.stopPropagation();
+   if(o[2].reset){st={trust:0,courage:0}}
+   else{st.trust+=o[2].trust||0;st.courage+=o[2].courage||0}
+   show(o[1]);};
+  box.appendChild(b);});
+}
+document.getElementById("box").onclick=function(){
+ if(idx<cur.l.length-1){idx++;line();}
+};
+document.getElementById("start").onclick=function(){document.getElementById("title").style.display="none";show("a1");};
+show("a1");
+</script></body></html>
